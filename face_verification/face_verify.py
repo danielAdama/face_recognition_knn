@@ -1,4 +1,5 @@
 import numpy as np
+import math
 import face_recognition
 import dlib
 import cv2
@@ -21,25 +22,34 @@ class FaceRecognition(object):
         face is present in the frame.
 
     """
-    def __init__(self, image, model='hog', tolerance=0.6, data=None):
+    def __init__(self, image, model='hog', tolerance=0.6, data=None, match_thres=0.6):
         self.image = image
         self.model = model
         self.tolerance = tolerance
         self.data = data
+        self.match_thres = match_thres
+        self.scores = []
         self.names = []
         self.counts = {}
 
-    def face_similarity_percent(self, face_score):
+    def face_similarity_percent(self, face_dist):
         """Function to calculate the face similarity between known face and
         input face
         
         Args:
-            face_score (float) : 
+            face_score (Numpy array) : 
         
         Returns:
             linear_per (float)
         """
-        pass
+        if face_dist.any() > self.match_thres:
+            range_ = (1.0 - self.match_thres)
+            linear_val = (1.0 - face_dist) / (range_ * 2.0)
+            return linear_val
+        else:
+            range_ = self.match_thres
+            linear_val = 1.0 - (face_dist / (range_ * 2.0))
+            return linear_val + ((1.0 - linear_val) * math.pow((linear_val - 0.5) * 2, 0.2))
         
     def faceAuth(self):
 
@@ -60,7 +70,8 @@ class FaceRecognition(object):
         for encoding in encodings:
             # Attempt to match each face to the input image in our known face database
             matches = face_recognition.compare_faces(self.data['encodings'], encoding, self.tolerance)
-            score = np.argmax(face_recognition.face_distance(self.data["encodings"], encoding))
+            face_dist = face_recognition.face_distance(self.data["encodings"], encoding)
+            self.scores.append(np.max(self.face_similarity_percent(face_dist)))
             name = "Unknown"
             matchFound = True
             # Check to see if we have found a match
@@ -77,7 +88,6 @@ class FaceRecognition(object):
                     name = self.data["names"][i]
                     self.counts[name] = self.counts.get(name, 0) + 1
 
-
                 # determine the recognized face with the largest number of
                 # votes (note: in the event of an unlikely tie Python will
                 # select first entry in the dictionary)
@@ -86,4 +96,4 @@ class FaceRecognition(object):
 
             self.names.append(name.capitalize())
 
-        return boxes, self.names
+        return (boxes, self.names, self.scores)

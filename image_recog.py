@@ -20,7 +20,7 @@ for filename in os.listdir(config.INPUT_PATH):
     # After processing convert the Image back to BGR
     image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
     fv = FaceRecognition(image=image, data=data)
-    boxes, names = fv.faceAuth()
+    boxes, names, _ = fv.faceAuth()
 
     for ((top, right, bottom, left), name) in zip(boxes, names):
         x = top - 15 if top - 15 > 15 else top + 15
@@ -30,6 +30,7 @@ for filename in os.listdir(config.INPUT_PATH):
         else:
             cv2.rectangle(image, (left, top), (right, bottom), (0, 255, 0), 2)
             cv2.putText(image, name, (left, x), config.FONT, 0.5, (0, 255, 0), 2)
+
     
     cv2.imshow("Image", image)
     cv2.waitKey(0)
